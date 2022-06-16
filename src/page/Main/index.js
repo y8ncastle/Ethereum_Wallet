@@ -1,11 +1,11 @@
-/* eslint-disable */
-import React, { Fragment, useState } from "react";
+import React, { Fragment, useState, useEffect } from "react";
 import { Button, Card } from "reactstrap";
 import ethereum from "../../assets/images/logo/ethereum.png";
 import crypto from "../../assets/images/cryptocurrency.png";
 import * as bip39 from "bip39";
 import hdkey from "ethereumjs-wallet/dist/hdkey";
 import erc from "../../assets/images/erc.png";
+import Web3 from "web3";
 
 const Main = () => {
   const [status, setStatus] = useState(7);
@@ -13,10 +13,8 @@ const Main = () => {
   const [checkPwd, setCheckPwd] = useState("");
   const [mnemonic, setMnemonic] = useState("");
   const [checkMnemo, setCheckMnemo] = useState("");
-  const [publicAdr, setPublicAdr] = useState(
-    "0x80eF9C46443E616032ffFB05e89aC7693830cD50"
-  );
   const [balance, setBalance] = useState(0);
+  const [txList, setTxList] = useState([]);
 
   const handlePwd = (e) => {
     setPwd(e.target.value);
@@ -41,6 +39,9 @@ const Main = () => {
     setCheckPwd("");
     setMnemonic("");
     setCheckMnemo("");
+    localStorage.setItem("wallet-key", "");
+    localStorage.setItem("private-addr", "");
+    localStorage.setItem("public-addr", "");
   };
 
   const checkPwdValidity = () => {
@@ -69,8 +70,7 @@ const Main = () => {
     const address = `0x${wallet.getAddress().toString("hex")}`;
 
     localStorage.setItem("private-addr", prvKey);
-    localStorage.setItem("public-addr", publicAdr);
-    setPublicAdr(address);
+    localStorage.setItem("public-addr", address);
   };
 
   const checkMnemonic = () => {
@@ -96,7 +96,106 @@ const Main = () => {
     }
   };
 
-  const checkUserData = async () => {};
+  const checkUserData = async () => {
+    try {
+      const web3 = new Web3(
+        new Web3.providers.HttpProvider(process.env.REACT_APP_INFURA_ROPSTEN)
+      );
+      const balCheck = await web3.eth.getBalance(
+        localStorage.getItem("public-addr")
+      );
+
+      setBalance(web3.utils.toWei(balCheck, "ether"));
+      setTxList([
+        {
+          status: "pending",
+          txHash:
+            "0xa9bb2cf55a1269127c359367de8b9dcd66518e340ebe3f0c97a930ff9d726a4f",
+          timestamp: "100000000000",
+        },
+      ]);
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
+  const TxDataList = (props) => {
+    if (txList.length > 0) {
+      return (
+        <>
+          {props.hashes.map((hash) => (
+            <div className="d-flex" style={{ justifyContent: "center" }}>
+              <Card
+                className="shadow"
+                style={{ width: "500px", height: "100px", marginTop: 30 }}
+              >
+                <div
+                  className="d-flex row"
+                  style={{ justifyContent: "space-between" }}
+                >
+                  {hash.status === "pending" ? (
+                    <Button
+                      disabled
+                      className="sebang"
+                      color="danger"
+                      style={{
+                        fontSize: "10px",
+                        marginTop: 15,
+                        marginLeft: 35,
+                      }}
+                    >
+                      Pending Transaction
+                    </Button>
+                  ) : (
+                    <Button
+                      disabled
+                      className="sebang"
+                      color="success"
+                      style={{
+                        fontSize: "10px",
+                        marginTop: 15,
+                        marginLeft: 35,
+                      }}
+                    >
+                      Completed Transaction
+                    </Button>
+                  )}
+                  <div
+                    className="sebang"
+                    style={{
+                      marginRight: 50,
+                      marginTop: 23,
+                      fontSize: "15px",
+                    }}
+                  >
+                    {hash.timestamp}
+                  </div>
+                </div>
+                <div className="sebang">
+                  <Button
+                    color="link"
+                    style={{ fontSize: "11.5px", marginTop: 7 }}
+                  >
+                    {hash.txHash}
+                  </Button>
+                </div>
+              </Card>
+            </div>
+          ))}
+        </>
+      );
+    } else return <></>;
+  };
+
+  useEffect(() => {
+    if (status >= 7) {
+      const interval = setInterval(() => {
+        checkUserData();
+      }, 5000);
+
+      return () => clearInterval(interval);
+    }
+  });
 
   return (
     <Fragment>
@@ -569,7 +668,7 @@ const Main = () => {
                       }}
                     >
                       <div style={{ marginTop: "15px", fontSize: "15px" }}>
-                        {publicAdr}
+                        {localStorage.getItem("public-addr")}
                       </div>
                     </div>
 
@@ -586,7 +685,7 @@ const Main = () => {
                         paddingBottom: "10px",
                       }}
                     >
-                      <div>보유 잔액:</div>
+                      <div>보유 잔액</div>
                       <div>{balance} ETH</div>
                     </div>
                     <div
@@ -626,7 +725,7 @@ const Main = () => {
                     }}
                   >
                     <div className="d-flex justify-content-center align-items-center row">
-                      <img src={erc} alt="..." width="35px" height="35px"></img>
+                      <img src={erc} alt="..." width="30px" height="30px"></img>
                       <Button
                         color="link"
                         style={{
@@ -648,7 +747,7 @@ const Main = () => {
           <>
             <div className="column">
               <Card
-                className="shadow"
+                className="shadow d-flex"
                 style={{
                   width: "600px",
                   minHeight: "73vh",
@@ -658,7 +757,15 @@ const Main = () => {
                   borderWidth: "2px",
                   borderColor: "#333333",
                 }}
-              ></Card>
+              >
+                <div
+                  className="sebang"
+                  style={{ marginTop: 30, marginLeft: 40, fontSize: "18px" }}
+                >
+                  트랜잭션 내역
+                </div>
+                <TxDataList hashes={txList} />
+              </Card>
             </div>
           </>
         ) : null}
