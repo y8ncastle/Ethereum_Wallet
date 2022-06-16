@@ -1,11 +1,20 @@
 import React, { Fragment, useState, useEffect } from "react";
-import { Button, Card } from "reactstrap";
+import {
+  Button,
+  Card,
+  Modal,
+  ModalBody,
+  ModalFooter,
+  ModalHeader,
+  Table,
+} from "reactstrap";
 import ethereum from "../../assets/images/logo/ethereum.png";
 import crypto from "../../assets/images/cryptocurrency.png";
 import * as bip39 from "bip39";
 import hdkey from "ethereumjs-wallet/dist/hdkey";
 import erc from "../../assets/images/erc.png";
 import Web3 from "web3";
+import abi from "../../common/abi";
 
 const Main = () => {
   const [status, setStatus] = useState(7);
@@ -15,6 +24,10 @@ const Main = () => {
   const [checkMnemo, setCheckMnemo] = useState("");
   const [balance, setBalance] = useState(0);
   const [txList, setTxList] = useState([]);
+  const [modalTransfer, setModalTransfer] = useState(false);
+  const [modalAdd, setModalAdd] = useState(false);
+  const [modalTx, setModalTx] = useState(false);
+  const [txDetail, setTxDetail] = useState([]);
 
   const handlePwd = (e) => {
     setPwd(e.target.value);
@@ -26,6 +39,18 @@ const Main = () => {
 
   const handleMnemonic = (e) => {
     setCheckMnemo(e.target.value);
+  };
+
+  const toggleTransfer = () => {
+    setModalTransfer(!modalTransfer);
+  };
+
+  const toggleModalAdd = () => {
+    setModalAdd(!modalAdd);
+  };
+
+  const toggleModalTx = () => {
+    setModalTx(!modalTx);
   };
 
   const initPwd = () => {
@@ -105,18 +130,125 @@ const Main = () => {
         localStorage.getItem("public-addr")
       );
 
+      const currentBlock = await web3.eth.getBlockNumber();
+
+      getTransactionsByAccount(
+        localStorage.getItem("public-addr"),
+        currentBlock - 50,
+        currentBlock
+      );
+
       setBalance(web3.utils.toWei(balCheck, "ether"));
       setTxList([
         {
-          status: "pending",
+          status: "success",
           txHash:
-            "0xa9bb2cf55a1269127c359367de8b9dcd66518e340ebe3f0c97a930ff9d726a4f",
+            "0x00dc5099bfa3e20aa90e0404ea6b52b3abde1a6488583a5405431338f6068414",
           timestamp: "100000000000",
         },
       ]);
     } catch (err) {
       console.log(err);
     }
+  };
+
+  async function getTransactionsByAccount(
+    myaccount,
+    startBlockNumber,
+    endBlockNumber
+  ) {
+    const web3 = new Web3(
+      new Web3.providers.HttpProvider(process.env.REACT_APP_INFURA_ROPSTEN)
+    );
+
+    if (endBlockNumber == null) {
+      endBlockNumber = await web3.eth.blockNumber;
+      console.log("Using endBlockNumber: " + endBlockNumber);
+    }
+    if (startBlockNumber == null) {
+      startBlockNumber = endBlockNumber - 1000;
+      console.log("Using startBlockNumber: " + startBlockNumber);
+    }
+    console.log(
+      'Searching for transactions to/from account "' +
+        myaccount +
+        '" within blocks ' +
+        startBlockNumber +
+        " and " +
+        endBlockNumber
+    );
+
+    for (var i = startBlockNumber; i <= endBlockNumber; i++) {
+      if (i % 1000 == 0) {
+        console.log("Searching block " + i);
+      }
+      var block = await web3.eth.getBlock(i, true);
+
+      if (block != null && block.transactions != null) {
+        block.transactions.forEach(function(e) {
+          if (myaccount == "*" || myaccount == e.from || myaccount == e.to) {
+            console.log(
+              "  tx hash          : " +
+                e.hash +
+                "\n" +
+                "   nonce           : " +
+                e.nonce +
+                "\n" +
+                "   blockHash       : " +
+                e.blockHash +
+                "\n" +
+                "   blockNumber     : " +
+                e.blockNumber +
+                "\n" +
+                "   transactionIndex: " +
+                e.transactionIndex +
+                "\n" +
+                "   from            : " +
+                e.from +
+                "\n" +
+                "   to              : " +
+                e.to +
+                "\n" +
+                "   value           : " +
+                e.value +
+                "\n" +
+                "   time            : " +
+                block.timestamp +
+                " " +
+                new Date(block.timestamp * 1000).toGMTString() +
+                "\n" +
+                "   gasPrice        : " +
+                e.gasPrice +
+                "\n" +
+                "   gas             : " +
+                e.gas +
+                "\n" +
+                "   input           : " +
+                e.input
+            );
+          }
+        });
+      }
+    }
+  }
+
+  const detailHash = async (hash) => {
+    const web3 = new Web3(
+      new Web3.providers.HttpProvider(process.env.REACT_APP_INFURA_ROPSTEN)
+    );
+
+    const result = await web3.eth.getTransactionReceipt(hash);
+
+    setTxDetail([
+      hash,
+      result.blockHash,
+      result.blockNumber,
+      result.from,
+      result.to,
+      result.logs[0].topics[0],
+    ]);
+
+    toggleModalTx();
   };
 
   const TxDataList = (props) => {
@@ -133,7 +265,7 @@ const Main = () => {
                   className="d-flex row"
                   style={{ justifyContent: "space-between" }}
                 >
-                  {hash.status === "pending" ? (
+                  {hash.status === "failed" ? (
                     <Button
                       disabled
                       className="sebang"
@@ -144,7 +276,7 @@ const Main = () => {
                         marginLeft: 35,
                       }}
                     >
-                      Pending Transaction
+                      Failed Transaction
                     </Button>
                   ) : (
                     <Button
@@ -174,7 +306,8 @@ const Main = () => {
                 <div className="sebang">
                   <Button
                     color="link"
-                    style={{ fontSize: "11.5px", marginTop: 7 }}
+                    style={{ fontSize: "11px", marginTop: 7 }}
+                    onClick={() => detailHash(hash.txHash)}
                   >
                     {hash.txHash}
                   </Button>
@@ -796,6 +929,74 @@ const Main = () => {
           </div>
         </div>
       </div>
+      <Modal
+        zIndex={2000}
+        centered
+        size="lg"
+        isOpen={modalTx}
+        toggle={toggleModalTx}
+      >
+        <ModalHeader
+          className="sebang"
+          style={{ fontSize: "13px", marginLeft: "5px" }}
+          toggle={toggleModalTx}
+        >
+          트랜잭션 상세 내역
+        </ModalHeader>
+        <ModalBody>
+          <div className="sebang">
+            <Table
+              hover
+              bordered
+              striped
+              className="mb-2"
+              style={{ fontSize: "12px" }}
+            >
+              <thead className="thead-light">
+                <tr>
+                  <th scope="col">Type</th>
+                  <th scope="col">Value</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row">Tx Hash</th>
+                  <td>{txDetail[0]}</td>
+                </tr>
+                <tr>
+                  <th scope="row">Block Hash</th>
+                  <td>{txDetail[1]}</td>
+                </tr>
+                <tr>
+                  <th scope="row">Block Number</th>
+                  <td>{txDetail[2]}</td>
+                </tr>
+                <tr>
+                  <th scope="row">From</th>
+                  <td>{txDetail[3]}</td>
+                </tr>
+                <tr>
+                  <th scope="row">To</th>
+                  <td>{txDetail[4]}</td>
+                </tr>
+                <tr>
+                  <th scope="row">Data</th>
+                  <td>{txDetail[5]}</td>
+                </tr>
+              </tbody>
+            </Table>
+          </div>
+        </ModalBody>
+        <ModalFooter>
+          <Button
+            className="sebang btn-link-dark"
+            color="link"
+            onClick={toggleModalTx}
+          >
+            닫기
+          </Button>
+        </ModalFooter>
+      </Modal>
     </Fragment>
   );
 };
