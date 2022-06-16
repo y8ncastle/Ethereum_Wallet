@@ -1,10 +1,99 @@
 /* eslint-disable */
-import React, { Fragment } from "react";
+import React, { Fragment, useState } from "react";
 import { Button, Card } from "reactstrap";
 import ethereum from "../../assets/images/logo/ethereum.png";
 import crypto from "../../assets/images/cryptocurrency.png";
+import * as bip39 from "bip39";
+import hdkey from "ethereumjs-wallet/dist/hdkey";
 
 const Main = () => {
+  const [status, setStatus] = useState(1);
+  const [pwd, setPwd] = useState("");
+  const [checkPwd, setCheckPwd] = useState("");
+  const [mnemonic, setMnemonic] = useState("");
+  const [checkMnemo, setCheckMnemo] = useState("");
+  const [publicAdr, setPublicAdr] = useState("");
+
+  const handlePwd = (e) => {
+    setPwd(e.target.value);
+  };
+
+  const handleCheckPwd = (e) => {
+    setCheckPwd(e.target.value);
+  };
+
+  const handleMnemonic = (e) => {
+    setCheckMnemo(e.target.value);
+  };
+
+  const initPwd = () => {
+    setPwd("");
+    setCheckPwd("");
+  };
+
+  const goBackToHome = () => {
+    setStatus(1);
+    setPwd("");
+    setCheckPwd("");
+    setMnemonic("");
+    setCheckMnemo("");
+  };
+
+  const checkPwdValidity = () => {
+    if (pwd.length === 0 || checkPwd.length === 0)
+      alert("비밀번호를 입력해주세요.");
+    else if (pwd !== checkPwd) alert("비밀번호가 서로 다릅니다.");
+    else {
+      localStorage.setItem("wallet-key", pwd);
+
+      if (status === 2) generateMnemonic();
+      else if (status === 5) setStatus(6);
+    }
+  };
+
+  const generateMnemonic = async () => {
+    const genMnemonic = bip39.generateMnemonic();
+
+    setMnemonic(genMnemonic);
+    setStatus(3);
+
+    const seed = await bip39.mnemonicToSeed(genMnemonic);
+    const hdWallet = hdkey.fromMasterSeed(seed);
+    const path = "m/44'/60'/0'/0/0";
+    const wallet = hdWallet.derivePath(path).getWallet();
+    const prvKey = `0x${wallet.getPrivateKey().toString("hex")}`;
+    const address = `0x${wallet.getAddress().toString("hex")}`;
+
+    localStorage.setItem("private-addr", prvKey);
+    setPublicAdr(address);
+  };
+
+  const checkMnemonic = () => {
+    if (mnemonic !== checkMnemo) alert("기존의 니모닉과 다릅니다.");
+    else {
+      localStorage.setItem("public-addr", address);
+      setStatus(7);
+    }
+  };
+
+  const validateMnemonic = async () => {
+    const result = bip39.validateMnemonic(checkMnemo);
+
+    if (result === false) alert("니모닉이 유효하지 않습니다.");
+    else {
+      const seed = await bip39.mnemonicToSeed(checkMnemo);
+      const hdWallet = hdkey.fromMasterSeed(seed);
+      const path = "m/44'/60'/0'/0/0";
+      const wallet = hdWallet.derivePath(path).getWallet();
+      const prvKey = `0x${wallet.getPrivateKey().toString("hex")}`;
+      const address = `0x${wallet.getAddress().toString("hex")}`;
+
+      localStorage.setItem("private-addr", prvKey);
+      localStorage.setItem("public-addr", address);
+      setStatus(7)
+    }
+  };
+
   return (
     <Fragment>
       <div
@@ -22,7 +111,7 @@ const Main = () => {
             className="sebang"
             style={{ color: "#ffffff", marginTop: 13, marginLeft: 25 }}
           >
-            Ethereum Wallet
+            Ethereum Web Wallet
           </h2>
         </div>
       </div>
@@ -52,68 +141,380 @@ const Main = () => {
               borderColor: "#333333",
             }}
           >
-            <div
-              className="d-flex"
-              style={{ justifyContent: "center", marginTop: 50 }}
-            >
-              <img src={crypto} alt="..." width="180px"></img>
-            </div>
-            <div
-              className="d-flex"
-              style={{ width: "580px", justifyContent: "center" }}
-            >
-              <div
-                className="leferi"
-                style={{ fontSize: "16px", marginTop: "70px" }}
-              >
-                새로운 이더리움 지갑을 생성합니다.
-              </div>
-            </div>
-            <div className="d-flex" style={{ justifyContent: "center" }}>
-              <Button
-                className="isa shadow"
-                style={{
-                  width: "350px",
-                  height: "60px",
-                  fontSize: "19px",
-                  borderRadius: "10px",
-                  borderWidth: "0px",
-                  marginTop: "30px",
-                  backgroundColor: "#56a897",
-                  color: "#ffffff",
-                }}
-              >
-                지갑 생성하기
-              </Button>
-            </div>
-            <div
-              className="d-flex"
-              style={{ width: "580px", justifyContent: "center" }}
-            >
-              <div
-                className="leferi"
-                style={{ fontSize: "16px", marginTop: "80px" }}
-              >
-                기존에 만든 이더리움 지갑을 불러옵니다.
-              </div>
-            </div>
-            <div className="d-flex" style={{ justifyContent: "center" }}>
-              <Button
-                className="isa shadow"
-                style={{
-                  width: "350px",
-                  height: "60px",
-                  fontSize: "19px",
-                  borderRadius: "10px",
-                  borderWidth: "0px",
-                  marginTop: "30px",
-                  backgroundColor: "#56a897",
-                  color: "#ffffff",
-                }}
-              >
-                지갑 복원하기
-              </Button>
-            </div>
+            {status === 1 ? (
+              <>
+                <div
+                  className="d-flex"
+                  style={{ justifyContent: "center", marginTop: 55 }}
+                >
+                  <img src={crypto} alt="..." width="180px"></img>
+                </div>
+                <div
+                  className="d-flex"
+                  style={{ width: "580px", justifyContent: "center" }}
+                >
+                  <div
+                    className="leferi"
+                    style={{ fontSize: "16px", marginTop: "70px" }}
+                  >
+                    새로운 이더리움 지갑을 생성합니다.
+                  </div>
+                </div>
+                <div className="d-flex" style={{ justifyContent: "center" }}>
+                  <Button
+                    className="isa shadow"
+                    style={{
+                      width: "350px",
+                      height: "60px",
+                      fontSize: "19px",
+                      borderRadius: "10px",
+                      borderWidth: "0px",
+                      marginTop: "30px",
+                      backgroundColor: "#56a897",
+                      color: "#ffffff",
+                    }}
+                    onClick={() => setStatus(2)}
+                  >
+                    지갑 생성하기
+                  </Button>
+                </div>
+                <div
+                  className="d-flex"
+                  style={{ width: "580px", justifyContent: "center" }}
+                >
+                  <div
+                    className="leferi"
+                    style={{ fontSize: "16px", marginTop: "80px" }}
+                  >
+                    기존에 만든 이더리움 지갑을 불러옵니다.
+                  </div>
+                </div>
+                <div className="d-flex" style={{ justifyContent: "center" }}>
+                  <Button
+                    className="isa shadow"
+                    style={{
+                      width: "350px",
+                      height: "60px",
+                      fontSize: "19px",
+                      borderRadius: "10px",
+                      borderWidth: "0px",
+                      marginTop: "30px",
+                      backgroundColor: "#56a897",
+                      color: "#ffffff",
+                    }}
+                    onClick={() => setStatus(5)}
+                  >
+                    지갑 복원하기
+                  </Button>
+                </div>
+              </>
+            ) : status === 2 || status === 5 ? (
+              <>
+                <div
+                  className="d-flex sebang"
+                  style={{
+                    justifyContent: "center",
+                    fontSize: "22px",
+                    marginTop: 70,
+                    marginBottom: 40,
+                  }}
+                >
+                  관리에 필요한 비밀번호를 설정해주세요.
+                </div>
+                <div className="leferi">
+                  <Card style={{ marginLeft: 40, marginRight: 40 }}>
+                    <input
+                      type="password"
+                      placeholder="비밀번호를 입력해주세요."
+                      maxLength="20"
+                      style={{ fontSize: "17px", padding: 15 }}
+                      onChange={handlePwd}
+                      value={pwd}
+                    ></input>
+                    <input
+                      type="password"
+                      placeholder="비밀번호를 다시 입력해주세요."
+                      maxLength="20"
+                      style={{ fontSize: "17px", padding: 15, marginTop: 20 }}
+                      onChange={handleCheckPwd}
+                      value={checkPwd}
+                    ></input>
+                  </Card>
+                </div>
+
+                <div>
+                  <div
+                    className="sebang d-flex"
+                    style={{ justifyContent: "center", marginTop: 60 }}
+                  >
+                    <Button
+                      style={{
+                        width: "200px",
+                        height: "50px",
+                        fontSize: "19px",
+                        backgroundColor: "#56a897",
+                        borderRadius: "10px",
+                        borderWidth: "0px",
+                        color: "#ffffff",
+                      }}
+                      onClick={checkPwdValidity}
+                    >
+                      설정하기
+                    </Button>
+                    <Button
+                      color="dark"
+                      style={{
+                        width: "200px",
+                        height: "50px",
+                        marginLeft: 40,
+                        fontSize: "19px",
+                        borderRadius: "10px",
+                        borderWidth: "0px",
+                        color: "#ffffff",
+                      }}
+                      onClick={initPwd}
+                    >
+                      입력 초기화
+                    </Button>
+                  </div>
+                  <div
+                    className="sebang d-flex"
+                    style={{ justifyContent: "center", marginTop: 40 }}
+                  >
+                    <Button
+                      color="dark"
+                      style={{
+                        width: "300px",
+                        height: "50px",
+                        fontSize: "19px",
+                        borderRadius: "10px",
+                        borderWidth: "0px",
+                        color: "#ffffff",
+                      }}
+                      onClick={goBackToHome}
+                    >
+                      돌아가기
+                    </Button>
+                  </div>
+                </div>
+              </>
+            ) : status === 3 ? (
+              <>
+                <div
+                  className="d-flex sebang"
+                  style={{
+                    justifyContent: "center",
+                    fontSize: "22px",
+                    marginTop: 70,
+                    marginBottom: 40,
+                  }}
+                >
+                  아래의 니모닉을 백업해주세요.
+                </div>
+                <textarea
+                  className="leferi"
+                  type="text"
+                  style={{
+                    fontSize: "17px",
+                    padding: 15,
+                    marginLeft: 40,
+                    marginRight: 40,
+                    height: "200px",
+                  }}
+                  value={mnemonic}
+                ></textarea>
+                <div
+                  className="leferi"
+                  style={{
+                    fontSize: "15px",
+                    color: "#ec5a50",
+                    marginTop: 20,
+                    marginLeft: 45,
+                  }}
+                >
+                  * 니모닉은 이더리움 계정을 복구할 수 있는 개인키입니다. 외부에
+                  공개되지
+                  <br />
+                  않도록 반드시 안전한 곳에 보관하시기 바랍니다.
+                </div>
+                <div
+                  className="d-flex sebang"
+                  style={{ marginTop: 40, justifyContent: "center" }}
+                >
+                  <Button
+                    style={{
+                      width: "300px",
+                      height: "60px",
+                      fontSize: "19px",
+                      borderRadius: "10px",
+                      borderWidth: "0px",
+                      marginTop: "30px",
+                      backgroundColor: "#56a897",
+                      color: "#ffffff",
+                    }}
+                    onClick={() => setStatus(4)}
+                  >
+                    백업 완료
+                  </Button>
+                </div>
+              </>
+            ) : status === 4 ? (
+              <>
+                <div
+                  className="d-flex sebang"
+                  style={{
+                    justifyContent: "center",
+                    fontSize: "22px",
+                    marginTop: 70,
+                    marginBottom: 40,
+                  }}
+                >
+                  앞에서 백업한 니모닉을 그대로 입력해주세요.
+                </div>
+                <textarea
+                  className="leferi"
+                  type="text"
+                  style={{
+                    fontSize: "17px",
+                    padding: 15,
+                    marginLeft: 40,
+                    marginRight: 40,
+                    height: "200px",
+                  }}
+                  rows="5"
+                  onChange={handleMnemonic}
+                  value={checkMnemo}
+                ></textarea>
+                <div
+                  className="leferi"
+                  style={{
+                    fontSize: "15px",
+                    color: "#ec5a50",
+                    marginTop: 20,
+                    marginLeft: 45,
+                  }}
+                >
+                  * 니모닉은 이더리움 계정을 복구할 수 있는 개인키입니다. 외부에
+                  공개되지
+                  <br />
+                  않도록 반드시 안전한 곳에 보관하시기 바랍니다.
+                </div>
+                <div
+                  className="d-flex sebang"
+                  style={{ marginTop: 40, justifyContent: "center" }}
+                >
+                  <Button
+                    style={{
+                      width: "200px",
+                      height: "60px",
+                      fontSize: "19px",
+                      borderRadius: "10px",
+                      borderWidth: "0px",
+                      marginTop: "30px",
+                      backgroundColor: "#56a897",
+                      color: "#ffffff",
+                    }}
+                    onClick={checkMnemonic}
+                  >
+                    복원하기
+                  </Button>
+                  <Button
+                    color="dark"
+                    style={{
+                      width: "200px",
+                      height: "60px",
+                      marginLeft: 30,
+                      fontSize: "19px",
+                      borderRadius: "10px",
+                      borderWidth: "0px",
+                      marginTop: "30px",
+                      color: "#ffffff",
+                    }}
+                    onClick={() => setStatus(3)}
+                  >
+                    다시 백업하기
+                  </Button>
+                </div>
+              </>
+            ) : status === 6 ? (
+              <>
+                <div
+                  className="d-flex sebang"
+                  style={{
+                    justifyContent: "center",
+                    fontSize: "22px",
+                    marginTop: 70,
+                    marginBottom: 40,
+                  }}
+                >
+                  복구할 니모닉을 입력해주세요.
+                </div>
+                <textarea
+                  className="leferi"
+                  type="text"
+                  style={{
+                    fontSize: "17px",
+                    padding: 15,
+                    marginLeft: 40,
+                    marginRight: 40,
+                    height: "200px",
+                  }}
+                  rows="5"
+                  onChange={handleMnemonic}
+                  value={checkMnemo}
+                ></textarea>
+                <div
+                  className="leferi"
+                  style={{
+                    fontSize: "15px",
+                    color: "#ec5a50",
+                    marginTop: 20,
+                    marginLeft: 45,
+                  }}
+                >
+                  * 니모닉은 이더리움 계정을 복구할 수 있는 개인키입니다. 외부에
+                  공개되지
+                  <br />
+                  않도록 반드시 안전한 곳에 보관하시기 바랍니다.
+                </div>
+                <div
+                  className="d-flex sebang"
+                  style={{ marginTop: 40, justifyContent: "center" }}
+                >
+                  <Button
+                    style={{
+                      width: "200px",
+                      height: "60px",
+                      fontSize: "19px",
+                      borderRadius: "10px",
+                      borderWidth: "0px",
+                      marginTop: "30px",
+                      backgroundColor: "#56a897",
+                      color: "#ffffff",
+                    }}
+                    onClick={validateMnemonic}
+                  >
+                    복원하기
+                  </Button>
+                  <Button
+                    color="dark"
+                    style={{
+                      width: "200px",
+                      height: "60px",
+                      marginLeft: 30,
+                      fontSize: "19px",
+                      borderRadius: "10px",
+                      borderWidth: "0px",
+                      marginTop: "30px",
+                      color: "#ffffff",
+                    }}
+                    onClick={goBackToHome}
+                  >
+                    홈으로 돌아가기
+                  </Button>
+                </div>
+              </>
+            ) : null}
           </Card>
         </div>
       </div>
