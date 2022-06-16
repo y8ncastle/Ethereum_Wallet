@@ -1,2 +1,1 @@
-# Ethereum_Wallet
-[Team] Software Engineering Final Project (1st Semester, 2022)
+## 2022 소프트웨어 공학 프로젝트 - 이더리움 지갑
