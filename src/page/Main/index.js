@@ -5,14 +5,18 @@ import ethereum from "../../assets/images/logo/ethereum.png";
 import crypto from "../../assets/images/cryptocurrency.png";
 import * as bip39 from "bip39";
 import hdkey from "ethereumjs-wallet/dist/hdkey";
+import erc from "../../assets/images/erc.png";
 
 const Main = () => {
-  const [status, setStatus] = useState(1);
+  const [status, setStatus] = useState(7);
   const [pwd, setPwd] = useState("");
   const [checkPwd, setCheckPwd] = useState("");
   const [mnemonic, setMnemonic] = useState("");
   const [checkMnemo, setCheckMnemo] = useState("");
-  const [publicAdr, setPublicAdr] = useState("");
+  const [publicAdr, setPublicAdr] = useState(
+    "0x80eF9C46443E616032ffFB05e89aC7693830cD50"
+  );
+  const [balance, setBalance] = useState(0);
 
   const handlePwd = (e) => {
     setPwd(e.target.value);
@@ -65,15 +69,13 @@ const Main = () => {
     const address = `0x${wallet.getAddress().toString("hex")}`;
 
     localStorage.setItem("private-addr", prvKey);
+    localStorage.setItem("public-addr", publicAdr);
     setPublicAdr(address);
   };
 
   const checkMnemonic = () => {
     if (mnemonic !== checkMnemo) alert("기존의 니모닉과 다릅니다.");
-    else {
-      localStorage.setItem("public-addr", address);
-      setStatus(7);
-    }
+    else setStatus(7);
   };
 
   const validateMnemonic = async () => {
@@ -90,9 +92,11 @@ const Main = () => {
 
       localStorage.setItem("private-addr", prvKey);
       localStorage.setItem("public-addr", address);
-      setStatus(7)
+      setStatus(7);
     }
   };
+
+  const checkUserData = async () => {};
 
   return (
     <Fragment>
@@ -514,9 +518,150 @@ const Main = () => {
                   </Button>
                 </div>
               </>
+            ) : status === 7 ? (
+              <>
+                <div
+                  className="d-flex sebang"
+                  style={{ marginTop: 30, justifyContent: "center" }}
+                >
+                  <Card
+                    className="d-flex bg-asteroid shadow"
+                    style={{
+                      width: "450px",
+                      borderRadius: "15px",
+                      height: "250px",
+                      marginTop: "10px",
+                      color: "#ffffff",
+                    }}
+                  >
+                    <div
+                      style={{
+                        marginTop: 20,
+                        marginLeft: 25,
+                        width: "400px",
+                        height: "40px",
+                        fontSize: "18px",
+                      }}
+                    >
+                      <div
+                        className="row"
+                        style={{ justifyContent: "space-between" }}
+                      >
+                        <div style={{ marginLeft: 25 }}>Ethereum</div>
+                        <div
+                          style={{
+                            marginRight: 25,
+                            color: "#909090",
+                            fontSize: "16px",
+                          }}
+                        >
+                          Ropsten Network
+                        </div>
+                      </div>
+                    </div>
+                    <div
+                      className="d-flex"
+                      style={{
+                        width: "450px",
+                        height: "40px",
+                        fontSize: "18px",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <div style={{ marginTop: "15px", fontSize: "15px" }}>
+                        {publicAdr}
+                      </div>
+                    </div>
+
+                    <div
+                      className="row"
+                      style={{
+                        marginTop: "30px",
+                        marginLeft: "25px",
+                        width: "400px",
+                        height: "30px",
+                        fontSize: "18px",
+                        justifyContent: "space-between",
+                        borderBottom: "1px dotted",
+                        paddingBottom: "10px",
+                      }}
+                    >
+                      <div>보유 잔액:</div>
+                      <div>{balance} ETH</div>
+                    </div>
+                    <div
+                      className="d-flex"
+                      style={{
+                        marginTop: "25px",
+                        width: "450px",
+                        height: "40px",
+                        fontSize: "18px",
+                        justifyContent: "center",
+                        backgroundColor: "#ffffff",
+                      }}
+                    >
+                      <Button
+                        block
+                        color="white"
+                        style={{ color: "#333333", fontSize: "16px" }}
+                      >
+                        전송하기
+                      </Button>
+                    </div>
+                  </Card>
+                </div>
+                <div
+                  className="d-flex sebang"
+                  style={{ marginTop: 30, justifyContent: "center" }}
+                >
+                  <Card
+                    className="d-flex shadow"
+                    style={{
+                      width: "450px",
+                      borderRadius: "15px",
+                      height: "90px",
+                      marginTop: "10px",
+                      color: "#ffffff",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <div className="d-flex justify-content-center align-items-center row">
+                      <img src={erc} alt="..." width="35px" height="35px"></img>
+                      <Button
+                        color="link"
+                        style={{
+                          color: "#333333",
+                          fontSize: "17px",
+                          marginLeft: "5px",
+                        }}
+                      >
+                        ERC20 커스텀 토큰 추가하기
+                      </Button>
+                    </div>
+                  </Card>
+                </div>
+              </>
             ) : null}
           </Card>
         </div>
+        {status >= 7 ? (
+          <>
+            <div className="column">
+              <Card
+                className="shadow"
+                style={{
+                  width: "600px",
+                  minHeight: "73vh",
+                  marginTop: 20,
+                  marginLeft: 20,
+                  borderRadius: "30px",
+                  borderWidth: "2px",
+                  borderColor: "#333333",
+                }}
+              ></Card>
+            </div>
+          </>
+        ) : null}
       </div>
       <div
         className="d-flex"
