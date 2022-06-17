@@ -18,7 +18,7 @@ import abi from "../../common/abi";
 import tokenIcon from "../../assets/images/tokens.png";
 
 const Main = () => {
-  const [status, setStatus] = useState(7);
+  const [status, setStatus] = useState(1);
   const [pwd, setPwd] = useState("");
   const [checkPwd, setCheckPwd] = useState("");
   const [mnemonic, setMnemonic] = useState("");
@@ -123,6 +123,8 @@ const Main = () => {
     setEthAddr("");
     setTokAmount("");
     setPwd("");
+    setSymbol("");
+    setDecimal("");
 
     toggleTokTransfer();
   };
@@ -213,15 +215,35 @@ const Main = () => {
         currentBlock
       );*/
 
+      if (customTokens.length > 0) {
+        let resultLists = [];
+        let copyList = customTokens;
+
+        for (let i = 0; i < copyList.length; i++) {
+          const tempContract = copyList[0][i].contract;
+          const contract = new web3.eth.Contract(abi, tempContract);
+          const tempBalance = await contract.methods
+            .balanceOf(localStorage.getItem("public-addr"))
+            .call();
+          const tempName = copyList[0][i].name;
+          const tempSymbol = copyList[0][i].symbol;
+          const tempDecimal = copyList[0][i].decimal;
+
+          resultLists.push([
+            {
+              contract: tempContract,
+              balance: tempBalance,
+              name: tempName,
+              symbol: tempSymbol,
+              decimal: tempDecimal,
+            },
+          ]);
+        }
+
+        setCustomTokens(resultLists);
+      }
+
       setBalance(web3.utils.fromWei(balCheck, "ether"));
-      setTxList([
-        {
-          status: "success",
-          txHash:
-            "0x00dc5099bfa3e20aa90e0404ea6b52b3abde1a6488583a5405431338f6068414",
-          timestamp: "1655430067",
-        },
-      ]);
     } catch (err) {
       console.log(err);
     }
@@ -332,7 +354,6 @@ const Main = () => {
       result.blockNumber,
       result.from,
       result.to,
-      result.logs[0].topics[0],
     ]);
 
     toggleModalTx();
@@ -374,7 +395,7 @@ const Main = () => {
           },
         ]);
 
-        setCustomTokens(resultList)
+        setCustomTokens(resultList);
         initAddInfo();
       }
     }
@@ -433,23 +454,117 @@ const Main = () => {
             console.log(res);
           });*/
 
-        await web3.eth.accounts.signTransaction(rawTx, localStorage.getItem('private-addr').toString('hex'), async (err, res) => {
-          if (err)
-            console.log(err)
-          else
-            console.log(res)
+        await web3.eth.accounts.signTransaction(
+          rawTx,
+          localStorage.getItem("private-addr").toString("hex"),
+          async (err, res) => {
+            if (err) console.log(err);
+            else console.log(res);
 
-          const raw = res.rawTransaction
+            const raw = res.rawTransaction;
 
-          await web3.eth.sendSignedTransaction(raw, (err, hash) => {
-            if (err)
-              console.log(err)
-            else
-              console.log(hash)
-          })
-        })
+            await web3.eth.sendSignedTransaction(raw, (err, hash) => {
+              if (err) console.log(err);
+              else {
+                let resultList = txList;
+                const time = new Date();
 
+                const addedTx = {
+                  status: "success",
+                  txHash: hash,
+                  timestamp: time,
+                };
+
+                resultList.push(addedTx);
+                setTxList(resultList);
+              }
+            });
+          }
+        );
+
+        alert(
+          "트랜잭션이 생성되었습니다. 블록체인에 반영 후 트랜잭션 내역에 표시됩니다."
+        );
         initTransferInfo();
+      }
+    }
+  };
+
+  const transferTokenProc = async () => {
+    const web3 = new Web3(
+      new Web3.providers.HttpProvider(process.env.REACT_APP_INFURA_ROPSTEN)
+    );
+
+    if (ethAddr.length === 0) alert("수신자의 이더리움 주소를 입력해주세요.");
+    else if (tokAmount.length === 0) alert("전송할 토큰 개수를 입력해주세요.");
+    else if (pwd.length === 0) alert("비밀번호를 입력해주세요.");
+    else {
+      const tempPwd = localStorage.getItem("wallet-key");
+      const checkAddr = web3.utils.isAddress(ethAddr);
+
+      let tempContract = "";
+      let tempDecimal = "";
+
+      for (let i = 0; i < customTokens.length; i++) {
+        if (customTokens[0][i].name === currentTok.name) {
+          tempContract = customTokens[0][i].contract;
+          tempDecimal = customTokens[0][i].decimal;
+          break;
+        }
+      }
+
+      const ca = new web3.eth.Contract(abi, tempContract);
+      const tokBalance = await ca.methods
+        .balanceOf(localStorage.getItem("public-addr"))
+        .call();
+
+      if (checkAddr === false) alert("주소 형식이 유효하지 않습니다.");
+      else if (tempPwd !== pwd) alert("비밀번호가 일치하지 않습니다.");
+      else if (tokBalance < tokAmount) alert("토큰 잔액이 부족합니다.");
+      else {
+        const rawTx = {
+          gasPrice: web3.utils.toHex(web3.utils.toWei("20", "gwei")),
+          gasLimit: web3.utils.toHex(60000),
+          from: localStorage.getItem("public-addr"),
+          to: tempContract,
+          value: web3.utils.toHex(0),
+          data: ca.methods
+            .transfer(ethAddr, tokAmount * 10 ** tempDecimal)
+            .encodeABI(),
+        };
+
+        await web3.eth.accounts.signTransaction(
+          rawTx,
+          localStorage.getItem("private-addr").toString("hex"),
+          async (err, res) => {
+            if (err) console.log(err);
+            else console.log(res);
+
+            const raw = res.rawTransaction;
+
+            await web3.eth.sendSignedTransaction(raw, async (err, hash) => {
+              if (err) console.log(err);
+              else {
+                let resultList = txList;
+                const time = new Date();
+
+                const addedTx = {
+                  status: "success",
+                  txHash: hash,
+                  timestamp: time,
+                };
+
+                resultList.push(addedTx);
+                setTxList(resultList);
+              }
+            });
+          }
+        );
+
+        alert(
+          "트랜잭션이 생성되었습니다. 블록체인에 반영 후 트랜잭션 내역에 표시됩니다."
+        );
+        initTokTransferInfo();
       }
     }
   };
@@ -560,7 +675,7 @@ const Main = () => {
                       fontSize: "15px",
                     }}
                   >
-                    {new Date(hash.timestamp * 1000).toLocaleString()}
+                    {new Date(hash.timestamp).toLocaleString()}
                   </div>
                 </div>
                 <div className="sebang">
@@ -1241,10 +1356,6 @@ const Main = () => {
                   <th scope="row">To</th>
                   <td>{txDetail[4]}</td>
                 </tr>
-                <tr>
-                  <th scope="row">Data</th>
-                  <td>{txDetail[5]}</td>
-                </tr>
               </tbody>
             </Table>
           </div>
@@ -1453,7 +1564,7 @@ const Main = () => {
             className="sebang btn-link-dark"
             size="sm"
             color="primary"
-            onClick={toggleTokTransfer}
+            onClick={transferTokenProc}
           >
             전송
           </Button>
