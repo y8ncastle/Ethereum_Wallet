@@ -15,6 +15,7 @@ import hdkey from "ethereumjs-wallet/dist/hdkey";
 import erc from "../../assets/images/erc.png";
 import Web3 from "web3";
 import abi from "../../common/abi";
+import tokens from "../../assets/images/tokens.png";
 
 const Main = () => {
   const [status, setStatus] = useState(7);
@@ -27,7 +28,18 @@ const Main = () => {
   const [modalTransfer, setModalTransfer] = useState(false);
   const [modalAdd, setModalAdd] = useState(false);
   const [modalTx, setModalTx] = useState(false);
+  const [modalTokTransfer, setModalTokTransfer] = useState(false);
   const [txDetail, setTxDetail] = useState([]);
+  const [customTokens, setCustomTokens] = useState([]);
+  const [ethAddr, setEthAddr] = useState("");
+  const [ethAmount, setEthAmount] = useState("");
+  const [tokAmount, setTokAmount] = useState("");
+  const [futureGas, setFutureGas] = useState("");
+  const [currentTok, setCurrentTok] = useState("");
+  const [contract, setContract] = useState("");
+  const [name, setName] = useState("");
+  const [symbol, setSymbol] = useState("");
+  const [decimal, setDecimal] = useState("");
 
   const handlePwd = (e) => {
     setPwd(e.target.value);
@@ -41,12 +53,44 @@ const Main = () => {
     setCheckMnemo(e.target.value);
   };
 
+  const handleEthAddr = (e) => {
+    setEthAddr(e.target.value);
+  };
+
+  const handleEthAmount = (e) => {
+    setEthAmount(e.target.value);
+  };
+
+  const handleTokAmount = (e) => {
+    setTokAmount(e.target.value);
+  };
+
+  const handleContract = (e) => {
+    setContract(e.target.value);
+  };
+
+  const handleName = (e) => {
+    setName(e.target.value);
+  };
+
+  const handleSymbol = (e) => {
+    setSymbol(e.target.value);
+  };
+
+  const handleDecimal = (e) => {
+    setDecimal(e.target.value);
+  };
+
   const toggleTransfer = () => {
     setModalTransfer(!modalTransfer);
   };
 
   const toggleModalAdd = () => {
     setModalAdd(!modalAdd);
+  };
+
+  const toggleTokTransfer = () => {
+    setModalTokTransfer(!modalTokTransfer);
   };
 
   const toggleModalTx = () => {
@@ -129,22 +173,33 @@ const Main = () => {
       const balCheck = await web3.eth.getBalance(
         localStorage.getItem("public-addr")
       );
+      const currentGas = await web3.eth.getGasPrice();
+      setFutureGas(web3.utils.fromWei(currentGas, "ether"));
 
-      const currentBlock = await web3.eth.getBlockNumber();
+      /*const currentBlock = await web3.eth.getBlockNumber();
 
       getTransactionsByAccount(
         localStorage.getItem("public-addr"),
         currentBlock - 50,
         currentBlock
-      );
+      );*/
 
-      setBalance(web3.utils.toWei(balCheck, "ether"));
+      setBalance(web3.utils.fromWei(balCheck, "ether"));
       setTxList([
         {
           status: "success",
           txHash:
             "0x00dc5099bfa3e20aa90e0404ea6b52b3abde1a6488583a5405431338f6068414",
-          timestamp: "100000000000",
+          timestamp: "1655430067",
+        },
+      ]);
+      setCustomTokens([
+        {
+          name: "BaSE",
+          symbol: "BSE",
+          decimal: "0",
+          contract: "0x47f7083d0E8e4d0DB26b1be805EdAc8aFbBC6357",
+          balance: "50",
         },
       ]);
     } catch (err) {
@@ -152,7 +207,7 @@ const Main = () => {
     }
   };
 
-  async function getTransactionsByAccount(
+  /*async function getTransactionsByAccount(
     myaccount,
     startBlockNumber,
     endBlockNumber
@@ -178,15 +233,16 @@ const Main = () => {
         endBlockNumber
     );
 
-    for (var i = startBlockNumber; i <= endBlockNumber; i++) {
+    for (let i = startBlockNumber; i <= endBlockNumber; i++) {
       if (i % 1000 == 0) {
         console.log("Searching block " + i);
       }
-      var block = await web3.eth.getBlock(i, true);
+      let block = await web3.eth.getBlock(i, true);
+      let resultList = [];
 
       if (block != null && block.transactions != null) {
         block.transactions.forEach(function(e) {
-          if (myaccount == "*" || myaccount == e.from || myaccount == e.to) {
+          if (myaccount === "*" || myaccount === e.from || myaccount === e.to) {
             console.log(
               "  tx hash          : " +
                 e.hash +
@@ -226,11 +282,22 @@ const Main = () => {
                 "   input           : " +
                 e.input
             );
+
+            resultList.push([
+              {
+                txHash: e.hash,
+                blockHash: e.blockHash,
+                blockNumber: e.blockNumber,
+                from: e.from,
+                to: e.to,
+                input: e.input,
+              },
+            ]);
           }
         });
       }
     }
-  }
+  }*/
 
   const detailHash = async (hash) => {
     const web3 = new Web3(
@@ -249,6 +316,67 @@ const Main = () => {
     ]);
 
     toggleModalTx();
+  };
+
+  const transferToken = async (name, symbol) => {
+    setCurrentTok({ name: name, symbol: symbol });
+
+    toggleTokTransfer();
+  };
+
+  const CustomDataList = (props) => {
+    if (customTokens.length > 0) {
+      return (
+        <>
+          {props.tokens.map((token) => (
+            <div
+              className="d-flex sebang"
+              style={{ marginTop: 30, justifyContent: "center" }}
+            >
+              <Card
+                className="d-flex shadow"
+                style={{
+                  width: "450px",
+                  borderRadius: "15px",
+                  height: "70px",
+                  marginTop: "10px",
+                  color: "#333333",
+                  justifyContent: "center",
+                }}
+              >
+                <div
+                  className="d-flex align-items-center row"
+                  style={{ justifyContent: "space-between" }}
+                >
+                  <img
+                    src={tokens}
+                    alt="..."
+                    width="7%"
+                    style={{ marginLeft: 40 }}
+                  ></img>
+                  <div style={{ marginRight: 95 }}>{token.name}</div>
+                  <div style={{ marginLeft: 70, marginRight: 10 }}>
+                    {token.balance} {token.symbol}
+                  </div>
+                  <Button
+                    color="primary"
+                    size="sm"
+                    style={{
+                      color: "#ffffff",
+                      fontSize: "14px",
+                      marginRight: "40px",
+                    }}
+                    onClick={() => transferToken(token.name, token.symbol)}
+                  >
+                    전송
+                  </Button>
+                </div>
+              </Card>
+            </div>
+          ))}
+        </>
+      );
+    } else return <></>;
   };
 
   const TxDataList = (props) => {
@@ -300,7 +428,7 @@ const Main = () => {
                       fontSize: "15px",
                     }}
                   >
-                    {hash.timestamp}
+                    {new Date(hash.timestamp * 1000).toLocaleString()}
                   </div>
                 </div>
                 <div className="sebang">
@@ -324,7 +452,7 @@ const Main = () => {
     if (status >= 7) {
       const interval = setInterval(() => {
         checkUserData();
-      }, 5000);
+      }, 1000);
 
       return () => clearInterval(interval);
     }
@@ -836,12 +964,14 @@ const Main = () => {
                         block
                         color="white"
                         style={{ color: "#333333", fontSize: "16px" }}
+                        onClick={toggleTransfer}
                       >
                         전송하기
                       </Button>
                     </div>
                   </Card>
                 </div>
+                <CustomDataList tokens={customTokens} />
                 <div
                   className="d-flex sebang"
                   style={{ marginTop: 30, justifyContent: "center" }}
@@ -864,10 +994,10 @@ const Main = () => {
                         style={{
                           color: "#333333",
                           fontSize: "17px",
-                          marginLeft: "5px",
                         }}
+                        onClick={toggleModalAdd}
                       >
-                        ERC20 커스텀 토큰 추가하기
+                        ERC-20 커스텀 토큰 추가하기
                       </Button>
                     </div>
                   </Card>
@@ -994,6 +1124,264 @@ const Main = () => {
             onClick={toggleModalTx}
           >
             닫기
+          </Button>
+        </ModalFooter>
+      </Modal>
+      <Modal
+        zIndex={2000}
+        centered
+        isOpen={modalTransfer}
+        toggle={toggleTransfer}
+      >
+        <ModalHeader
+          className="sebang"
+          style={{ fontSize: "13px", marginLeft: "5px" }}
+          toggle={toggleTransfer}
+        >
+          이더리움 전송
+        </ModalHeader>
+        <ModalBody>
+          <div className="sebang">
+            <div className="d-flex row">
+              <div style={{ marginLeft: 25, marginTop: 5, marginRight: 20 }}>
+                수신 주소
+              </div>
+              <input
+                type="text"
+                placeholder="전송할 이더리움 주소를 입력해주세요."
+                style={{
+                  fontSize: "13px",
+                  padding: 5,
+                  width: "350px",
+                  marginLeft: 12,
+                }}
+                onChange={handleEthAddr}
+                value={ethAddr}
+              ></input>
+            </div>
+            <div className="row">
+              <div style={{ marginLeft: 25, marginTop: 25, marginRight: 20 }}>
+                전송 개수
+              </div>
+              <input
+                type="number"
+                placeholder="전송할 이더리움 개수를 입력해주세요."
+                style={{
+                  fontSize: "13px",
+                  padding: 5,
+                  width: "250px",
+                  marginTop: 20,
+                  marginLeft: 12,
+                }}
+                onChange={handleEthAmount}
+                value={ethAmount}
+              ></input>
+              <div style={{ marginLeft: 12, marginTop: 26 }}>ETH</div>
+            </div>
+            <div className="row">
+              <div style={{ marginLeft: 25, marginTop: 30, marginRight: 20 }}>
+                예상 수수료
+              </div>
+              <input
+                disabled
+                type="number"
+                style={{
+                  fontSize: "13px",
+                  padding: 5,
+                  width: "250px",
+                  marginTop: 25,
+                }}
+                value={futureGas}
+              ></input>
+              <div style={{ marginLeft: 12, marginTop: 30 }}>ETH</div>
+            </div>
+          </div>
+        </ModalBody>
+        <ModalFooter>
+          <Button
+            className="sebang btn-link-dark"
+            size="sm"
+            color="primary"
+            onClick={toggleTransfer}
+          >
+            전송
+          </Button>
+        </ModalFooter>
+      </Modal>
+      <Modal
+        zIndex={2000}
+        centered
+        isOpen={modalTokTransfer}
+        toggle={toggleTokTransfer}
+      >
+        <ModalHeader
+          className="sebang"
+          style={{ fontSize: "13px", marginLeft: "5px" }}
+          toggle={toggleTokTransfer}
+        >
+          ERC-20 토큰 전송
+        </ModalHeader>
+        <ModalBody>
+          <div className="sebang">
+            <div className="d-flex row">
+              <div style={{ marginLeft: 25, marginTop: 5, marginRight: 20 }}>
+                수신 주소
+              </div>
+              <input
+                type="text"
+                placeholder="전송할 이더리움 주소를 입력해주세요."
+                style={{
+                  fontSize: "13px",
+                  padding: 5,
+                  width: "350px",
+                  marginLeft: 12,
+                }}
+                onChange={handleEthAddr}
+                value={ethAddr}
+              ></input>
+            </div>
+            <div className="row">
+              <div style={{ marginLeft: 25, marginTop: 25, marginRight: 20 }}>
+                전송 개수
+              </div>
+              <input
+                type="number"
+                placeholder="전송할 토큰 개수를 입력해주세요."
+                style={{
+                  fontSize: "13px",
+                  padding: 5,
+                  width: "250px",
+                  marginTop: 20,
+                  marginLeft: 12,
+                }}
+                onChange={handleTokAmount}
+                value={tokAmount}
+              ></input>
+              <div style={{ marginLeft: 12, marginTop: 26 }}>
+                {currentTok.symbol}
+              </div>
+            </div>
+            <div className="row">
+              <div style={{ marginLeft: 25, marginTop: 30, marginRight: 20 }}>
+                예상 수수료
+              </div>
+              <input
+                disabled
+                type="number"
+                style={{
+                  fontSize: "13px",
+                  padding: 5,
+                  width: "250px",
+                  marginTop: 25,
+                }}
+                value={futureGas}
+              ></input>
+              <div style={{ marginLeft: 12, marginTop: 30 }}>ETH</div>
+            </div>
+          </div>
+        </ModalBody>
+        <ModalFooter>
+          <Button
+            className="sebang btn-link-dark"
+            size="sm"
+            color="primary"
+            onClick={toggleTokTransfer}
+          >
+            전송
+          </Button>
+        </ModalFooter>
+      </Modal>
+      <Modal zIndex={2000} centered isOpen={modalAdd} toggle={toggleModalAdd}>
+        <ModalHeader
+          className="sebang"
+          style={{ fontSize: "13px", marginLeft: "5px" }}
+          toggle={toggleModalAdd}
+        >
+          ERC-20 커스텀 토큰 추가
+        </ModalHeader>
+        <ModalBody>
+          <div className="sebang">
+            <div className="d-flex row">
+              <div style={{ marginLeft: 25, marginTop: 5, marginRight: 20 }}>
+                컨트랙트 주소
+              </div>
+              <input
+                type="text"
+                placeholder="토큰의 컨트랙트 주소를 입력해주세요."
+                style={{
+                  fontSize: "13px",
+                  padding: 5,
+                  width: "350px",
+                  marginLeft: 5,
+                }}
+                onChange={handleContract}
+                value={contract}
+              ></input>
+            </div>
+            <div className="row">
+              <div style={{ marginLeft: 25, marginTop: 25, marginRight: 20 }}>
+                토큰 이름
+              </div>
+              <input
+                type="text"
+                placeholder="토큰의 이름을 입력해주세요."
+                style={{
+                  fontSize: "13px",
+                  padding: 5,
+                  width: "250px",
+                  marginTop: 20,
+                  marginLeft: 32,
+                }}
+                onChange={handleName}
+                value={name}
+              ></input>
+            </div>
+            <div className="row">
+              <div style={{ marginLeft: 25, marginTop: 25, marginRight: 20 }}>
+                토큰 심볼
+              </div>
+              <input
+                type="text"
+                placeholder="토큰의 심볼을 입력해주세요."
+                style={{
+                  fontSize: "13px",
+                  padding: 5,
+                  width: "250px",
+                  marginTop: 20,
+                  marginLeft: 32,
+                }}
+                onChange={handleSymbol}
+                value={symbol}
+              ></input>
+            </div>
+            <div className="row">
+              <div style={{ marginLeft: 25, marginTop: 30, marginRight: 20 }}>
+                소수점 자리수
+              </div>
+              <input
+                type="number"
+                placeholder="토큰 소수점 자리수(Decimal)을 입력해주세요."
+                style={{
+                  fontSize: "13px",
+                  padding: 5,
+                  width: "300px",
+                  marginTop: 25,
+                  marginLeft: 5,
+                }}
+                onChange={handleDecimal}
+                value={decimal}
+              ></input>
+            </div>
+          </div>
+        </ModalBody>
+        <ModalFooter>
+          <Button
+            className="sebang btn-link-dark"
+            size="sm"
+            color="primary"
+            onClick={toggleModalAdd}
+          >
+            등록
           </Button>
         </ModalFooter>
       </Modal>
