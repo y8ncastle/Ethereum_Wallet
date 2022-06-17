@@ -15,7 +15,7 @@ import hdkey from "ethereumjs-wallet/dist/hdkey";
 import erc from "../../assets/images/erc.png";
 import Web3 from "web3";
 import abi from "../../common/abi";
-import tokens from "../../assets/images/tokens.png";
+import tokenIcon from "../../assets/images/tokens.png";
 
 const Main = () => {
   const [status, setStatus] = useState(7);
@@ -102,6 +102,31 @@ const Main = () => {
     setCheckPwd("");
   };
 
+  const initAddInfo = () => {
+    setContract("");
+    setName("");
+    setSymbol("");
+    setDecimal("");
+
+    toggleModalAdd();
+  };
+
+  const initTransferInfo = () => {
+    setEthAddr("");
+    setEthAmount("");
+    setPwd("");
+
+    toggleTransfer();
+  };
+
+  const initTokTransferInfo = () => {
+    setEthAddr("");
+    setTokAmount("");
+    setPwd("");
+
+    toggleTokTransfer();
+  };
+
   const goBackToHome = () => {
     setStatus(1);
     setPwd("");
@@ -144,7 +169,10 @@ const Main = () => {
 
   const checkMnemonic = () => {
     if (mnemonic !== checkMnemo) alert("기존의 니모닉과 다릅니다.");
-    else setStatus(7);
+    else {
+      setPwd("");
+      setStatus(7);
+    }
   };
 
   const validateMnemonic = async () => {
@@ -161,6 +189,7 @@ const Main = () => {
 
       localStorage.setItem("private-addr", prvKey);
       localStorage.setItem("public-addr", address);
+      setPwd("");
       setStatus(7);
     }
   };
@@ -191,15 +220,6 @@ const Main = () => {
           txHash:
             "0x00dc5099bfa3e20aa90e0404ea6b52b3abde1a6488583a5405431338f6068414",
           timestamp: "1655430067",
-        },
-      ]);
-      setCustomTokens([
-        {
-          name: "BaSE",
-          symbol: "BSE",
-          decimal: "0",
-          contract: "0x47f7083d0E8e4d0DB26b1be805EdAc8aFbBC6357",
-          balance: "50",
         },
       ]);
     } catch (err) {
@@ -324,11 +344,121 @@ const Main = () => {
     toggleTokTransfer();
   };
 
+  const addToken = async () => {
+    const web3 = new Web3(
+      new Web3.providers.HttpProvider(process.env.REACT_APP_INFURA_ROPSTEN)
+    );
+
+    if (contract.length === 0) alert("컨트랙트 주소를 입력해주세요.");
+    else if (name.length === 0) alert("토큰 이름을 입력해주세요.");
+    else if (symbol.length === 0) alert("토큰 심볼을 입력해주세요.");
+    else if (decimal.length === 0) alert("토큰 소수점 자리수를 입력해주세요.");
+    else {
+      const caCheck = web3.utils.isAddress(contract);
+
+      if (caCheck === false) alert("컨트랙트 주소 형식이 유효하지 않습니다.");
+      else {
+        let resultList = customTokens;
+        const ca = new web3.eth.Contract(abi, process.env.REACT_APP_CA);
+        const currentBal = await ca.methods
+          .balanceOf(localStorage.getItem("public-addr"))
+          .call();
+
+        resultList.push([
+          {
+            name: name,
+            contract: contract,
+            symbol: symbol,
+            decimal: decimal,
+            balance: currentBal,
+          },
+        ]);
+
+        setCustomTokens(resultList)
+        initAddInfo();
+      }
+    }
+  };
+
+  const transferEther = async () => {
+    const web3 = new Web3(
+      new Web3.providers.HttpProvider(process.env.REACT_APP_INFURA_ROPSTEN)
+    );
+
+    if (ethAddr.length === 0) alert("수신자의 이더리움 주소를 입력해주세요.");
+    else if (ethAmount.length === 0)
+      alert("전송할 이더리움 개수를 입력해주세요.");
+    else if (pwd.length === 0) alert("비밀번호를 입력해주세요.");
+    else {
+      const tempPwd = localStorage.getItem("wallet-key");
+      const checkAddr = web3.utils.isAddress(ethAddr);
+      const ethBalance = await web3.eth.getBalance(
+        localStorage.getItem("public-addr")
+      );
+      /*const txCount = web3.eth.getTransactionCount(
+        localStorage.getItem("public-addr")
+      );*/
+
+      if (checkAddr === false) alert("주소 형식이 유효하지 않습니다.");
+      else if (tempPwd !== pwd) alert("비밀번호가 일치하지 않습니다.");
+      else if (web3.utils.fromWei(ethBalance, "ether") < ethAmount)
+        alert("이더리움 잔액이 부족합니다.");
+      else {
+        const rawTx = {
+          //nonce: web3.utils.toHex(txCount),
+          gasPrice: web3.utils.toHex(web3.utils.toWei("20", "gwei")),
+          gasLimit: web3.utils.toHex(21000),
+          from: localStorage.getItem("public-addr"),
+          to: ethAddr,
+          value: web3.utils.toHex(web3.utils.toWei(ethAmount, "ether")),
+        };
+
+        /*const signature = new Buffer.from(
+          localStorage.getItem("private-addr").substring(2),
+          "hex"
+        );
+        const tx = new Tx(rawTx);
+
+        tx.sign(signature);
+
+        let serializedTx = tx.serialize();
+        const txHex = "0x" + serializedTx.toString("hex");
+
+        await web3.eth
+          .sendSignedTransaction(txHex)
+          .on("receipt", function(res) {
+            console.log(res);
+          })
+          .on("confirmation", function(res) {
+            console.log(res);
+          });*/
+
+        await web3.eth.accounts.signTransaction(rawTx, localStorage.getItem('private-addr').toString('hex'), async (err, res) => {
+          if (err)
+            console.log(err)
+          else
+            console.log(res)
+
+          const raw = res.rawTransaction
+
+          await web3.eth.sendSignedTransaction(raw, (err, hash) => {
+            if (err)
+              console.log(err)
+            else
+              console.log(hash)
+          })
+        })
+
+        initTransferInfo();
+      }
+    }
+  };
+
   const CustomDataList = (props) => {
     if (customTokens.length > 0) {
       return (
         <>
-          {props.tokens.map((token) => (
+          {props.tokens.map((token, index) => (
             <div
               className="d-flex sebang"
               style={{ marginTop: 30, justifyContent: "center" }}
@@ -349,14 +479,14 @@ const Main = () => {
                   style={{ justifyContent: "space-between" }}
                 >
                   <img
-                    src={tokens}
+                    src={tokenIcon}
                     alt="..."
                     width="7%"
                     style={{ marginLeft: 40 }}
                   ></img>
-                  <div style={{ marginRight: 95 }}>{token.name}</div>
+                  <div style={{ marginRight: 95 }}>{token[index].name}</div>
                   <div style={{ marginLeft: 70, marginRight: 10 }}>
-                    {token.balance} {token.symbol}
+                    {token[index].balance} {token[index].symbol}
                   </div>
                   <Button
                     color="primary"
@@ -366,7 +496,9 @@ const Main = () => {
                       fontSize: "14px",
                       marginRight: "40px",
                     }}
-                    onClick={() => transferToken(token.name, token.symbol)}
+                    onClick={() =>
+                      transferToken(token[index].name, token[index].symbol)
+                    }
                   >
                     전송
                   </Button>
@@ -1136,7 +1268,7 @@ const Main = () => {
         <ModalHeader
           className="sebang"
           style={{ fontSize: "13px", marginLeft: "5px" }}
-          toggle={toggleTransfer}
+          toggle={initTransferInfo}
         >
           이더리움 전송
         </ModalHeader>
@@ -1195,6 +1327,24 @@ const Main = () => {
               ></input>
               <div style={{ marginLeft: 12, marginTop: 30 }}>ETH</div>
             </div>
+            <div className="row">
+              <div style={{ marginLeft: 25, marginTop: 30, marginRight: 20 }}>
+                비밀번호
+              </div>
+              <input
+                type="password"
+                placeholder="서명을 위해 비밀번호를 입력해주세요."
+                style={{
+                  fontSize: "13px",
+                  padding: 5,
+                  width: "250px",
+                  marginTop: 25,
+                  marginLeft: 18,
+                }}
+                onChange={handlePwd}
+                value={pwd}
+              ></input>
+            </div>
           </div>
         </ModalBody>
         <ModalFooter>
@@ -1202,7 +1352,7 @@ const Main = () => {
             className="sebang btn-link-dark"
             size="sm"
             color="primary"
-            onClick={toggleTransfer}
+            onClick={transferEther}
           >
             전송
           </Button>
@@ -1217,7 +1367,7 @@ const Main = () => {
         <ModalHeader
           className="sebang"
           style={{ fontSize: "13px", marginLeft: "5px" }}
-          toggle={toggleTokTransfer}
+          toggle={initTokTransferInfo}
         >
           ERC-20 토큰 전송
         </ModalHeader>
@@ -1278,6 +1428,24 @@ const Main = () => {
               ></input>
               <div style={{ marginLeft: 12, marginTop: 30 }}>ETH</div>
             </div>
+            <div className="row">
+              <div style={{ marginLeft: 25, marginTop: 30, marginRight: 20 }}>
+                비밀번호
+              </div>
+              <input
+                type="password"
+                placeholder="서명을 위해 비밀번호를 입력해주세요."
+                style={{
+                  fontSize: "13px",
+                  padding: 5,
+                  width: "250px",
+                  marginTop: 25,
+                  marginLeft: 18,
+                }}
+                onChange={handlePwd}
+                value={pwd}
+              ></input>
+            </div>
           </div>
         </ModalBody>
         <ModalFooter>
@@ -1295,7 +1463,7 @@ const Main = () => {
         <ModalHeader
           className="sebang"
           style={{ fontSize: "13px", marginLeft: "5px" }}
-          toggle={toggleModalAdd}
+          toggle={initAddInfo}
         >
           ERC-20 커스텀 토큰 추가
         </ModalHeader>
@@ -1379,9 +1547,9 @@ const Main = () => {
             className="sebang btn-link-dark"
             size="sm"
             color="primary"
-            onClick={toggleModalAdd}
+            onClick={addToken}
           >
-            등록
+            추가
           </Button>
         </ModalFooter>
       </Modal>
